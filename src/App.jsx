@@ -1,9 +1,17 @@
 import Search from "./components/search.jsx";
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 import Spinner from "./components/spinner.jsx";
 import MovieCard from "./components/MovieCard.jsx";
 import {useDebounce} from "react-use";
 import {getTrendingMovies, updateSearchCount} from "./appwrite.js";
+
+import { gsap } from "gsap";
+
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+// ScrollSmoother requires ScrollTrigger
+import { ScrollSmoother } from "gsap/ScrollSmoother";
+gsap.registerPlugin(ScrollTrigger,ScrollSmoother);
+
 
 const App = () => {
     const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -18,6 +26,11 @@ const App = () => {
     const [trendingMovies, setTrendingMovies] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [debouncedSearchTerm, setdebouncedSearchTerm] = useState('');
+
+    const trendingRef = useRef(null);
+    const allMoviesRef = useRef(null);
+    const heroImgRef = useRef(null);
+    const titleRef = useRef(null);
 
     useDebounce(() => setdebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
@@ -69,19 +82,150 @@ const App = () => {
     useEffect(() => {
         loadTrendingMovies();
     }, []);
+
+    //GSAP ANIMATION
+    useEffect(() => {
+        if (trendingMovies.length > 0 && trendingRef.current) {
+            const items = trendingRef.current.querySelectorAll("li");
+            let mm = gsap.matchMedia();
+
+            mm.add({
+                isDesktop: "(min-width: 1025px)",
+                isMobile: "(max-width: 1024px)"
+            }, (context) => {
+                let { isDesktop } = context.conditions;
+
+                gsap.fromTo(
+                    items,
+                    {
+                        opacity: 0,
+                        x: isDesktop ? 140 : 150,
+                        y: 40,
+                        scale: 0.8,
+                    },
+                    {
+                        opacity: 1,
+                        x: 0,
+                        y: 0,
+                        scale: 1,
+                        stagger: 0.1,
+                        ease: isDesktop ? "none" : "power1.out",
+                        scrollTrigger: {
+                            trigger: trendingRef.current,
+                            start: isDesktop ? "top 80%" : "top 60%",
+                            end: isDesktop ? "top 30%" : "top 20%",
+                            scrub: isDesktop ? 1 : false,
+                            toggleActions: isDesktop ? "none" : "play none reverse reverse",
+                        },
+                    }
+                );
+            });
+
+            return () => mm.revert();
+        }
+    }, [trendingMovies]);
+    useEffect(() => {
+        if (!isLoading && movieList.length > 0 && allMoviesRef.current) {
+            const cards = allMoviesRef.current.querySelectorAll(".movie-card");
+            let mm = gsap.matchMedia();
+
+            mm.add({
+
+                isDesktop: "(min-width: 1025px)",
+                isMobile: "(max-width: 1024px)"
+            }, (context) => {
+                let { isDesktop } = context.conditions;
+
+                if (isDesktop) {
+
+                    gsap.fromTo(cards,
+                        { opacity: 0, y: 100 },
+                        {
+                            opacity: 1,
+                            y: 0,
+                            stagger: 0.1,
+                            scrollTrigger: {
+                                trigger: allMoviesRef.current,
+                                start: "top 90%",
+                                end: "bottom 80%",
+                                scrub: 1,
+                            }
+                        }
+                    );
+                } else {
+                    cards.forEach((card) => {
+                        gsap.fromTo(card,
+                            {
+                                opacity: 0,
+                                y: 80,
+                                scale: 0.8
+                            },
+                            {
+                                opacity: 1,
+                                y: 0,
+                                scale: 1,
+                                duration: 0.7,
+                                ease: "power1.inOut",
+                                scrollTrigger: {
+                                    trigger: card,
+                                    start: "top 50%",
+                                    toggleActions: "play none none none"
+                                }
+                            }
+                        );
+                    });
+                }
+            });
+
+            return () => mm.revert(); // Очищення всіх медіа-запитів
+        }
+    }, [movieList, isLoading]);
+    useEffect(() => {
+        const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+        tl.fromTo(heroImgRef.current,
+            {
+                scale: 0.8,
+                opacity: 0,
+                y: 40
+            },
+            {
+                scale: 1,
+                opacity: 1,
+                y: 0,
+                duration: 1.2
+            }
+        )
+            .fromTo(titleRef.current,
+                {
+                    y: 30,
+                    opacity: 0
+                },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.8
+                },
+                "-=0.6"
+            );
+    }, []);
+
+
+
     return (
         <main>
             <div className="pattern"/>
 
             <div className="wrapper">
                 <header>
-                    <img src={'./hero.png'} alt="hero banner" fetchPriority={"high"} loading={"eager"}/>
-                    <h1>Find <span className="text-gradient">Movies</span> You'll enjoy without the Hassle</h1>
+                    <img ref={heroImgRef} src={'./hero.png'} alt="hero banner" fetchPriority={"high"} loading={"eager"}/>
+                    <h1 ref={titleRef}>Find <span className="text-gradient">Movies</span> You'll enjoy without the Hassle</h1>
+
 
                     <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
                 </header>
                 {trendingMovies.length > 0 && (
-                    <section className="trending">
+                    <section className="trending" ref={trendingRef}>
                         <h2>Trending movies</h2>
                         <ul>
                             {trendingMovies.map((movie, index) => (
@@ -93,7 +237,7 @@ const App = () => {
                         </ul>
                     </section>
                 )}
-                <section className={"all-movies"}>
+                <section className={"all-movies"} ref={allMoviesRef}>
                     <h2>All movies</h2>
                     {isLoading ? (
                         <Spinner />
@@ -112,6 +256,7 @@ const App = () => {
 
         </main>
     );
+
 };
 
 export default App;

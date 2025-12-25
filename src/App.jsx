@@ -75,7 +75,7 @@ const App = () => {
 
             <div className="wrapper">
                 <header>
-                    <img src={'./hero.png'} alt="hero banner"/>
+                    <img src={'./hero.png'} alt="hero banner" fetchPriority={"high"} loading={"eager"}/>
                     <h1>Find <span className="text-gradient">Movies</span> You'll enjoy without the Hassle</h1>
 
                     <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />

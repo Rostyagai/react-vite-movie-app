@@ -4,6 +4,7 @@ import Spinner from "./components/spinner.jsx";
 import MovieCard from "./components/MovieCard.jsx";
 import {useDebounce} from "react-use";
 import {getTrendingMovies, updateSearchCount} from "./appwrite.js";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 import { gsap } from "gsap";
 
@@ -253,7 +254,7 @@ const App = () => {
                 </section>
             </div>
 
-
+            <SpeedInsights />
         </main>
     );
 
